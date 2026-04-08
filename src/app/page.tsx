@@ -254,54 +254,46 @@ export default function HomePage() {
     // During simulation, show agent positions from simState
     if (isSimulating) {
       if (grid.obstacles.has(key)) {
-        return { className: "grid-cell grid-cell-obstacle", label: "", color: "", isAgent: false };
+        return { className: "grid-cell grid-cell-obstacle", label: "", color: "", isAgent: false, goalReached: false };
       }
       // Check if an active agent is here
       for (const agent of agents) {
         if (simState.arrivedAgents.has(agent.id)) continue;
         const agentPos = simState.agentPositions.get(agent.id);
         if (agentPos && posKey(agentPos) === key) {
-          return { className: "grid-cell grid-cell-empty", label: agent.name, color: agent.color, isAgent: true };
+          return { className: "grid-cell grid-cell-empty", label: agent.name, color: agent.color, isAgent: true, goalReached: false };
         }
       }
-      // Check goal markers
+      // Check goal markers -- always show, highlight if arrived
       for (const agent of agents) {
-        if (simState.arrivedAgents.has(agent.id)) continue;
         if (posKey(agent.goal) === key) {
-          return { className: "grid-cell grid-cell-goal", label: agent.name, color: agent.color, isAgent: false };
+          const reached = simState.arrivedAgents.has(agent.id);
+          const cls = reached ? "grid-cell grid-cell-goal goal-reached" : "grid-cell grid-cell-goal";
+          return { className: cls, label: agent.name, color: agent.color, isAgent: false, goalReached: reached };
         }
       }
-      return { className: "grid-cell grid-cell-empty", label: "", color: "", isAgent: false };
+      // Check start markers -- always show, highlight like finished node
+      for (const agent of agents) {
+        if (posKey(agent.start) === key) {
+          return { className: "grid-cell grid-cell-start goal-reached", label: "", color: agent.color, isAgent: false, goalReached: true };
+        }
+      }
+      return { className: "grid-cell grid-cell-empty", label: "", color: "", isAgent: false, goalReached: false };
     }
 
     // Setup mode rendering
     if (grid.obstacles.has(key)) {
-      return { className: "grid-cell grid-cell-obstacle", label: "", color: "", isAgent: false };
+      return { className: "grid-cell grid-cell-obstacle", label: "", color: "", isAgent: false, goalReached: false };
     }
     for (const agent of agents) {
       if (posKey(agent.start) === key) {
-        return { className: "grid-cell grid-cell-start", label: agent.name, color: agent.color, isAgent: false };
+        return { className: "grid-cell grid-cell-start", label: agent.name, color: agent.color, isAgent: false, goalReached: false };
       }
       if (posKey(agent.goal) === key) {
-        return { className: "grid-cell grid-cell-goal", label: agent.name, color: agent.color, isAgent: false };
+        return { className: "grid-cell grid-cell-goal", label: agent.name, color: agent.color, isAgent: false, goalReached: false };
       }
     }
-    return { className: "grid-cell grid-cell-empty", label: "", color: "", isAgent: false };
-  };
-
-  // --- Path trail for simulation ---
-  const getTrailColor = (pos: Position): string | null => {
-    if (!isSimulating || !solution) return null;
-    const key = posKey(pos);
-    for (const agent of agents) {
-      const path = solution.paths.get(agent.id);
-      if (!path) continue;
-      const end = Math.min(simState!.timestep, path.length);
-      for (let t = 0; t < end; t++) {
-        if (posKey(path[t].position) === key) return agent.color;
-      }
-    }
-    return null;
+    return { className: "grid-cell grid-cell-empty", label: "", color: "", isAgent: false, goalReached: false };
   };
 
   return (
@@ -418,37 +410,82 @@ export default function HomePage() {
 
         {/* CENTER: Grid */}
         <div className="setup-main">
-          <div className="grid-container"
-            style={{ gridTemplateColumns: `repeat(${grid.width}, var(--cell-size))` }}>
-            {Array.from({ length: grid.height }, (_, r) =>
-              Array.from({ length: grid.width }, (_, c) => {
-                const pos: Position = { row: r, col: c };
-                const info = getCellInfo(pos);
-                const trail = getTrailColor(pos);
-                return (
-                  <div key={`${r}-${c}`} className={info.className}
-                    style={info.color ? {
-                      borderColor: info.color,
-                      background: info.isAgent ? info.color + "30" : info.color + "20",
-                      color: info.color,
-                    } : undefined}
-                    onClick={() => handleCellClick(pos)}>
-                    {/* Trail dot */}
-                    {trail && !info.isAgent && !grid.obstacles.has(posKey(pos)) && (
-                      <div className="path-trail" style={{ background: trail }} />
-                    )}
-                    {/* Agent marker during simulation */}
-                    {info.isAgent && (
-                      <div className="agent-marker"
-                        style={{ background: info.color, boxShadow: `0 0 14px ${info.color}60` }}>
-                        {info.label}
-                      </div>
-                    )}
-                    {/* Label (non-agent) */}
-                    {!info.isAgent && info.label}
-                  </div>
-                );
-              })
+          <div style={{ position: "relative" }}>
+            <div className="grid-container"
+              style={{ gridTemplateColumns: `repeat(${grid.width}, var(--cell-size))` }}>
+              {Array.from({ length: grid.height }, (_, r) =>
+                Array.from({ length: grid.width }, (_, c) => {
+                  const pos: Position = { row: r, col: c };
+                  const info = getCellInfo(pos);
+                  return (
+                    <div key={`${r}-${c}`} className={info.className}
+                      style={info.color ? {
+                        borderColor: info.color,
+                        background: info.goalReached
+                          ? info.color + "35"
+                          : info.isAgent ? info.color + "30" : info.color + "20",
+                        color: info.color,
+                        ...(info.goalReached ? {
+                          boxShadow: `inset 0 0 16px ${info.color}50, 0 0 10px ${info.color}30`,
+                          border: `2px solid ${info.color}`,
+                        } : {}),
+                      } : undefined}
+                      onClick={() => handleCellClick(pos)}>
+                      {/* Agent marker during simulation */}
+                      {info.isAgent && (
+                        <div className="agent-marker"
+                          style={{ background: info.color, boxShadow: `0 0 14px ${info.color}60` }}>
+                          {info.label}
+                        </div>
+                      )}
+                      {/* Label (non-agent) */}
+                      {!info.isAgent && info.label}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* SVG Path Overlay */}
+            {isSimulating && solution && (
+              <svg style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 1 }}>
+                {agents.map((agent, i) => {
+                  const path = solution.paths.get(agent.id);
+                  if (!path) return null;
+
+                  // We draw path up to the current timestep. If timestep=0, we only have start position
+                  const end = Math.min(simState!.timestep + 1, path.length);
+                  if (end === 0) return null;
+
+                  const activePath = path.slice(0, end);
+
+                  // Offset each agent's line slightly to avoid overlapping perfectly.
+                  // E.g., if spread is 16px, an agent's line is shifted between -8px and 8px depending on index.
+                  const spread = 16;
+                  const offset = agents.length > 1 ? (-spread / 2 + i * (spread / (agents.length - 1))) : 0;
+
+                  const points = activePath.map((step) => {
+                    // cell_size = 44, cell_gap = 2, padding = 8
+                    // cx = 8 + col * (44 + 2) + 22 = col * 46 + 30
+                    const cx = step.position.col * 46 + 30 + offset;
+                    const cy = step.position.row * 46 + 30 + offset;
+                    return `${cx},${cy}`;
+                  }).join(" ");
+
+                  return (
+                    <polyline
+                      key={agent.id}
+                      points={points}
+                      fill="none"
+                      stroke={agent.color}
+                      strokeWidth="4"
+                      strokeLinecap="square"
+                      strokeLinejoin="miter"
+                      opacity="0.8"
+                    />
+                  );
+                })}
+              </svg>
             )}
           </div>
 
@@ -464,8 +501,10 @@ export default function HomePage() {
                     fontSize: "0.7rem", color: arrived ? "var(--accent-green)" : agent.color,
                     fontFamily: "var(--font-mono)", opacity: arrived ? 0.6 : 1,
                   }}>
-                    <div style={{ width: 6, height: 6, borderRadius: "50%",
-                      background: arrived ? "var(--accent-green)" : agent.color }} />
+                    <div style={{
+                      width: 6, height: 6, borderRadius: "50%",
+                      background: arrived ? "var(--accent-green)" : agent.color
+                    }} />
                     {agent.name} {arrived ? "(done)" : ""}
                   </div>
                 );

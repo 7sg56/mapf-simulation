@@ -25,14 +25,14 @@ export default function LogPanel({ entries, onClear }: LogPanelProps) {
     }, [entries]);
 
     return (
-        <div className="panel" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        <div className="panel" style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: "150px" }}>
             <div className="panel-header">
                 <h2>AI Log</h2>
                 <button className="btn btn-sm btn-ghost" onClick={onClear}>
                     Clear
                 </button>
             </div>
-            <div className="log-container" ref={scrollRef} style={{ flex: 1 }}>
+            <div className="log-container" ref={scrollRef} style={{ flex: 1, minHeight: 0 }}>
                 {entries.length === 0 && (
                     <div
                         style={{

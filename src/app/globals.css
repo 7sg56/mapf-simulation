@@ -91,7 +91,8 @@ body {
   font-family: var(--font-sans);
   background: var(--bg-primary);
   color: var(--text-primary);
-  min-height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   line-height: 1.5;
 }
 
@@ -99,7 +100,7 @@ body {
 .app-layout {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100%;
 }
 
 .app-header {
@@ -132,6 +133,7 @@ body {
 
 .app-main {
   flex: 1;
+  min-height: 0;
   display: flex;
   gap: var(--space-lg);
   padding: var(--space-lg);
@@ -432,12 +434,24 @@ body {
   animation: agent-arrive 0.5s var(--ease-out) forwards;
 }
 
-/* --- Path trail --- */
-.path-trail {
-  position: absolute;
-  inset: 0;
-  opacity: 0.18;
-  pointer-events: none;
+
+/* --- Goal reached highlight --- */
+.goal-reached {
+  opacity: 1 !important;
+  border-style: solid !important;
+  animation: goal-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes goal-pulse {
+
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+
+  50% {
+    opacity: 1;
+  }
 }
 
 /* --- Log panel --- */
@@ -445,7 +459,6 @@ body {
   font-family: var(--font-mono);
   font-size: 0.72rem;
   line-height: 1.7;
-  max-height: 300px;
   overflow-y: auto;
   padding: var(--space-sm);
   background: var(--bg-surface);
@@ -669,6 +682,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
+  min-height: 0;
   overflow-y: auto;
 }
 
@@ -704,6 +718,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
+  min-height: 0;
   overflow-y: auto;
 }
 

@@ -113,7 +113,12 @@ export function stepSimulation(
                 arrivedAgents.add(agent.id);
                 log?.({
                     level: "success",
-                    message: `Agent ${agent.name} reached goal at (${nextPos.row},${nextPos.col}) - disappearing from grid`,
+                    message: `Agent ${agent.name} reached goal at (x:${nextPos.col}, y:${nextPos.row}) - disappearing from grid`,
+                });
+            } else {
+                log?.({
+                    level: "info",
+                    message: `[t=${nextTimestep}] ${agent.name} moved to (x:${nextPos.col}, y:${nextPos.row})`
                 });
             }
         } else {
