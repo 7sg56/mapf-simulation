@@ -144,6 +144,7 @@ body {
 .panel {
   background: var(--bg-secondary);
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .panel-header {

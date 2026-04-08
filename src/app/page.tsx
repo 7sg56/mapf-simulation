@@ -327,7 +327,14 @@ export default function HomePage() {
                 {isSolving ? "Solving..." : "Solve"}
               </button>
               {isSimulating && (
-                <button className="btn btn-ghost" style={{ background: "var(--bg-elevated)" }} onClick={handleBackToEdit}>
+                <button
+                  className={`btn ${simState?.isComplete ? "btn-primary" : "btn-ghost"}`}
+                  style={{
+                    background: simState?.isComplete ? undefined : "var(--bg-elevated)",
+                    animation: simState?.isComplete ? "goal-pulse 1.5s ease-in-out infinite" : "none"
+                  }}
+                  onClick={handleBackToEdit}
+                >
                   &larr; Back to Edit
                 </button>
               )}

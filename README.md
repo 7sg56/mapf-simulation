@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MAPF Simulator (Multi-Agent Pathfinding)
 
-## Getting Started
+**Live Simulator:** [mapf-ai.netlify.app](https://mapf-ai.netlify.app)
 
-First, run the development server:
+## Theoretical Overview
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Multi-Agent Pathfinding (MAPF) is the theoretical computational problem of finding collision-free paths for multiple agents operating in a shared environment, from a set of starting locations to a set of target destinations. Finding optimal solutions to MAPF is NP-hard, making it a critical research area in artificial intelligence, robotics, and warehouse automation.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+This project serves as an interactive simulator to visualize the behavior and constraints of two fundamental MAPF algorithms: **Conflict-Based Search (CBS)** and **Prioritized Planning**.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### The Problem Space
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+In MAPF, agents traverse a discretized grid. A valid solution must ensure that at no timestep `t` do two agents:
 
-## Learn More
+1. Occupy the same vertex (Vertex Collision).
+2. Traverse the same edge in opposite directions simultaneously (Edge/Swap Collision).
 
-To learn more about Next.js, take a look at the following resources:
+### Conflict-Based Search (CBS)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+CBS is a prominent two-level, optimal algorithm.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **High-Level Search:** Builds a Constraint Tree (CT). Each node in the CT contains a set of constraints and a solution consistent with those constraints. If the solution contains conflicts (e.g., Agent A and Agent B schedule the same cell at time `t`), the node is split. Two child nodes are created where a new constraint is added to each: one forbidding A from being at the cell at $t$, and another forbidding B.
+- **Low-Level Search:** Performs an A* search in space-time for individual agents, respecting the constraints dictated by the high-level node.
 
-## Deploy on Vercel
+Because CBS only searches the joint state space when forced to by a conflict, it successfully mitigates the exponential blowup typically associated with tracking multiple agents simultaneously in traditional A*.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Prioritized Planning
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Prioritized Planning is a decoupled, sub-optimal (heuristic) approach prized for its extreme computational efficiency.
+
+- Agents are assigned a strict priority ordering.
+- Paths are planned sequentially based on this order.
+- When planning for Agent N, the algorithm treats the space-time paths of all higher-priority agents (1 through N-1) as dynamic, moving obstacles.
+
+While incredibly fast, Prioritized Planning is inherently *incomplete* (it may fail to find a solution when one exists, particularly in dense scenarios where high-priority agents block critical thoroughfares) and *sub-optimal* (the sum of costs may be higher than mathematically necessary).
+
+## About this Simulator
+
+The simulator provides a grid-spaced visual abstraction of these theoretical concepts:
+
+- **Metrics Analysis:** Exposes Makespan (the time until the last agent completes its path), Total Cost (the sum of all path lengths), and the number of node expansions/conflicts encountered.
+- **Path Verification:** Visualizes how paths gracefully detour each other through deterministic coordinate routing to avoid space-time collapses.
+- **Algorithmic Determinism:** Allows live toggling between solving methodologies to demonstratively prove the operational boundaries and trade-offs of CBS vs Prioritized Planning.
