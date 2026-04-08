@@ -73,7 +73,7 @@ export default function GridView({
         const trailColor = trailMap.get(key);
 
         let className = "grid-cell";
-        let style: React.CSSProperties = {};
+        const style: React.CSSProperties = {};
 
         if (isObstacle) {
             className += " grid-cell-obstacle";
