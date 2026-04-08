@@ -174,13 +174,15 @@ export default function HomePage() {
 
   // --- Randomize ---
   const handleRandomize = useCallback(() => {
-    const result = randomizeGrid(grid.width, grid.height, 0.2, 3);
+    // Keep the current number of agents, default to 3 if none, but don't exceed 10.
+    const count = agents.length > 0 ? agents.length : 3;
+    const result = randomizeGrid(grid.width, grid.height, 0.2, count);
     if (result) {
       setGrid(result.grid);
       setAgents(result.agents);
       clearSolution();
     }
-  }, [grid.width, grid.height, clearSolution]);
+  }, [grid.width, grid.height, agents.length, clearSolution]);
 
   // --- Clear ---
   const handleClear = useCallback(() => {
@@ -310,6 +312,28 @@ export default function HomePage() {
       <main className="app-main">
         {/* LEFT SIDEBAR: Setup controls */}
         <div className="setup-sidebar">
+          {/* Pathfinding / Algorithm */}
+          <div className="panel">
+            <div className="panel-header"><h2>Pathfinding</h2></div>
+            <div className="panel-body" style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
+              <div className="input-group">
+                <label>Algorithm</label>
+                <select className="select" value={algorithm} disabled={isSolving} onChange={(e) => setAlgorithm(e.target.value as "cbs" | "prioritized")}>
+                  <option value="cbs">Conflict-Based Search (CBS)</option>
+                  <option value="prioritized">Prioritized Planning</option>
+                </select>
+              </div>
+              <button className="btn btn-success" onClick={handleSolve} disabled={isSolving || agents.length === 0}>
+                {isSolving ? "Solving..." : "Solve"}
+              </button>
+              {isSimulating && (
+                <button className="btn btn-ghost" style={{ background: "var(--bg-elevated)" }} onClick={handleBackToEdit}>
+                  &larr; Back to Edit
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Grid Size */}
           <div className="panel">
             <div className="panel-header"><h2>Grid Size</h2></div>
@@ -382,11 +406,11 @@ export default function HomePage() {
           </div>
 
           {/* Quick actions */}
-          <div className="toolbar">
-            <button className="btn btn-ghost" onClick={handleRandomize} disabled={isSimulating}>
+          <div className="toolbar" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-sm)' }}>
+            <button className="btn btn-ghost" style={{ background: "var(--bg-tertiary)" }} onClick={handleRandomize} disabled={isSimulating}>
               Randomize
             </button>
-            <button className="btn btn-ghost" onClick={handleClear} disabled={isSimulating}>
+            <button className="btn btn-ghost" style={{ background: "var(--bg-tertiary)" }} onClick={handleClear} disabled={isSimulating}>
               Clear
             </button>
           </div>
@@ -410,6 +434,34 @@ export default function HomePage() {
 
         {/* CENTER: Grid */}
         <div className="setup-main">
+          {/* Top Controls Toolbar */}
+          <div style={{ display: "flex", gap: "var(--space-lg)", width: "100%", justifyContent: "center", flexWrap: "wrap" }}>
+            {/* Playback Controls */}
+            {isSimulating && (
+              <div className="panel" style={{ display: "flex", alignItems: "center", padding: "var(--space-sm) var(--space-lg)", gap: "var(--space-md)", borderRadius: "var(--radius-md)" }}>
+                <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-secondary)", letterSpacing: "0.05em" }}>PLAYBACK</span>
+                <button className="btn btn-icon btn-ghost" onClick={handleReset} title="Reset">&#x21BA;</button>
+                {isPlaying ? (
+                  <button className="btn btn-icon btn-primary" onClick={() => setIsPlaying(false)} title="Pause">&#x23F8;</button>
+                ) : (
+                  <button className="btn btn-icon btn-primary" onClick={() => setIsPlaying(true)} disabled={simState.isComplete} title="Play">&#x25B6;</button>
+                )}
+                <button className="btn btn-icon btn-ghost" onClick={handleStep} disabled={simState.isComplete || isPlaying} title="Step">&#x23ED;</button>
+                <div className="timestep-display" style={{ margin: "0 var(--space-sm)" }}>t={simState.timestep}/{simState.maxTimestep}</div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", borderLeft: "1px solid var(--border-subtle)", paddingLeft: "var(--space-md)" }}>
+                  <input type="range" className="speed-slider" min={100} max={2000} step={100} value={speed} onChange={(e) => setSpeed(parseInt(e.target.value))} />
+                  <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)", minWidth: 36 }}>{speed}ms</span>
+                </div>
+              </div>
+            )}
+          </div>
+          {noSolution && (
+            <div className="no-solution-msg" style={{ padding: "var(--space-sm)", fontSize: "0.85rem", background: "var(--accent-red-dim)", color: "var(--accent-red)", borderRadius: "var(--radius-md)" }}>
+              No collision-free solution found.
+            </div>
+          )}
+
           <div style={{ position: "relative" }}>
             <div className="grid-container"
               style={{ gridTemplateColumns: `repeat(${grid.width}, var(--cell-size))` }}>
@@ -427,7 +479,8 @@ export default function HomePage() {
                         color: info.color,
                         ...(info.goalReached ? {
                           boxShadow: `inset 0 0 16px ${info.color}50, 0 0 10px ${info.color}30`,
-                          border: `2px solid ${info.color}`,
+                          borderWidth: "2px",
+                          borderStyle: "solid",
                         } : {}),
                       } : undefined}
                       onClick={() => handleCellClick(pos)}>
@@ -513,68 +566,8 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* RIGHT SIDEBAR: Solve + Playback + Metrics + Log */}
+        {/* RIGHT SIDEBAR: Metrics + Log */}
         <div className="sim-sidebar">
-          {/* Algorithm + Solve */}
-          <div className="panel">
-            <div className="panel-header"><h2>Pathfinding</h2></div>
-            <div className="panel-body" style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
-              <div className="input-group">
-                <label>Algorithm</label>
-                <select className="select" value={algorithm} disabled={isSolving}
-                  onChange={(e) => setAlgorithm(e.target.value as "cbs" | "prioritized")}>
-                  <option value="cbs">Conflict-Based Search (CBS)</option>
-                  <option value="prioritized">Prioritized Planning</option>
-                </select>
-              </div>
-              <button className="btn btn-success" onClick={handleSolve}
-                disabled={isSolving || agents.length === 0}>
-                {isSolving ? "Solving..." : "Solve"}
-              </button>
-              {isSimulating && (
-                <button className="btn btn-ghost" onClick={handleBackToEdit}>
-                  &larr; Back to Edit
-                </button>
-              )}
-              {noSolution && (
-                <div className="no-solution-msg" style={{ padding: "var(--space-sm)", fontSize: "0.75rem" }}>
-                  No collision-free solution found.
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Playback controls */}
-          {isSimulating && (
-            <div className="panel">
-              <div className="panel-header"><h2>Playback</h2></div>
-              <div className="panel-body">
-                <div className="playback-bar">
-                  <button className="btn btn-icon btn-ghost" onClick={handleReset} title="Reset">&#x21BA;</button>
-                  {isPlaying ? (
-                    <button className="btn btn-icon btn-primary" onClick={() => setIsPlaying(false)} title="Pause">&#x23F8;</button>
-                  ) : (
-                    <button className="btn btn-icon btn-primary" onClick={() => setIsPlaying(true)}
-                      disabled={simState.isComplete} title="Play">&#x25B6;</button>
-                  )}
-                  <button className="btn btn-icon btn-ghost" onClick={handleStep}
-                    disabled={simState.isComplete || isPlaying} title="Step">&#x23ED;</button>
-                  <div className="timestep-display">t={simState.timestep}/{simState.maxTimestep}</div>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", marginTop: "var(--space-sm)" }}>
-                  <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
-                    Speed
-                  </span>
-                  <input type="range" className="speed-slider" min={100} max={2000} step={100}
-                    value={speed} onChange={(e) => setSpeed(parseInt(e.target.value))} />
-                  <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)", minWidth: 36 }}>
-                    {speed}ms
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Metrics */}
           <MetricsPanel solution={solution} agents={agents} />
 
